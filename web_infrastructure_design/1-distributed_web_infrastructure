@@ -1,0 +1,92 @@
+# 1. Distributed Web Infrastructure
+
+## Infrastructure Diagram (Whiteboard Screenshot)
+[🔗 Insert your image link here]
+
+---
+
+## Overview
+
+We are hosting `www.foobar.com` using a **distributed three-server infrastructure**.  
+Traffic first reaches a **Load Balancer (HAProxy)** which distributes requests between two application servers.  
+Each application server contains Nginx, an application server, the application code, and a MySQL database.  
+
+---
+
+## Components
+
+| Component | Description |
+|----------|-------------|
+| Load Balancer: HAProxy | Distributes incoming traffic to multiple backend servers |
+| 2 Web Servers | Each runs Nginx + Application server + App code + MySQL |
+| Application Files | Same codebase deployed on both servers |
+| DNS | `www.foobar.com` resolves to LB public IP |
+| Database | MySQL replication (Primary → Replica) |
+
+---
+
+## Why each element is added
+
+1. **Load Balancer (HAProxy)**  
+   - Added to prevent overload on a single server and enable distribution of traffic.  
+   - Ensures high availability and better performance.  
+
+2. **Two Web/App servers**  
+   - Redundancy: if one fails, the website remains available.  
+   - Enables horizontal scaling.  
+   - Both serve the same application and handle client requests.
+
+3. **Database Primary-Replica setup**  
+   - Prevents database SPOF.  
+   - Primary node handles writes.  
+   - Replica node handles read queries for load offloading and failover scenario.
+
+---
+
+## Load Balancer configuration
+
+- **Algorithm:** Round Robin  
+  The load balancer forwards requests in order: Server1 → Server2 → Server1 → Server2 → ...
+
+- **Setup Type:** Active-Active  
+  Both servers receive traffic simultaneously and serve requests.  
+
+### Difference:
+
+| Active-Active | Active-Passive |
+|---------------|----------------|
+| Both servers handle traffic | Only primary handles traffic |
+| Higher performance | Failover only when primary dies |
+| Better scaling | Wasted capacity during normal operation |
+
+---
+
+## Primary-Replica (Master-Slave) DB Explanation
+
+- **Primary Node (Master)**  
+  - Handles all **write** operations (INSERT, UPDATE, DELETE).  
+  - Replicates data to the Replica.
+
+- **Replica Node (Slave)**  
+  - Handles **read** queries to reduce load on primary.  
+  - Can take over as Primary if the master fails (manual or automated failover).  
+
+---
+
+## Issues with this infrastructure
+
+1. **Still has SPOF:**
+   - Load Balancer (only one). If it fails → whole system goes down.
+   - Primary DB — if not auto-failover configured.
+
+2. **Security issues:**
+   - No firewall to filter malicious traffic.
+   - No HTTPS (plaintext traffic possible).
+   - No SSL certificates → data not encrypted.
+
+3. **No monitoring system:**
+   - We cannot detect failures in real time.
+   - No alerting or performance tracking (CPU/RAM/Traffic/DB health).
+
+---
+

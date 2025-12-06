@@ -1,0 +1,79 @@
+# 3. Scale Up
+
+## Diagram (Whiteboard Screenshot)
+[🔗 Insert your image link here]
+
+---
+
+## Overview
+
+We scale up the previous architecture in order to improve availability, performance and reliability.  
+The difference now is that **each layer of the infrastructure is separated** into dedicated servers and we introduce an additional load balancer to achieve high availability at the LB level.
+
+The system now contains:
+
+- 2 Load Balancers (HAProxy) configured in cluster mode
+- 1 dedicated Web Server (Nginx only)
+- 1 dedicated Application Server (runs application logic)
+- 1 dedicated Database Server (MySQL only)
+- Total: 4 servers
+
+---
+
+## Components
+
+| Component | Purpose |
+|----------|----------|
+| Load Balancer #1 (HAProxy) | Handles incoming requests and distributes traffic to web servers |
+| Load Balancer #2 (HAProxy) | Cluster redundancy – takes over if LB1 fails |
+| Web Server (Nginx server only) | Serves static files, handles HTTP requests, forwards dynamic requests to the app server |
+| Application Server | Executes backend logic and handles business code |
+| Database Server (MySQL) | Stores persistent data, isolated for security and performance |
+
+---
+
+## Why each element is added
+
+1. **Second Load Balancer**
+   - Added for **high availability (HA)**.
+   - Provides redundancy: if LB1 goes down, LB2 continues serving traffic.
+   - Eliminates the load balancer as a single point of failure.
+
+2. **Dedicated Web Server**
+   - Separates static content and HTTP handling from the application logic.
+   - Better performance and easier scaling — we can add more web servers without touching app or DB servers.
+   - Security improvement: isolates user–facing entry point.
+
+3. **Dedicated Application Server**
+   - Runs business logic separately from web traffic handling.
+   - Allows independent scaling of application layer (scale horizontally by adding more app servers).
+   - Reduces CPU/RAM load on the web tier.
+
+4. **Dedicated Database Server**
+   - Improves data security and consistency by isolating DB operations.
+   - Prevents compute load from web/app from interfering with DB performance.
+   - Allows future scaling using replication or sharding.
+
+---
+
+## Application server vs Web server
+
+| Web Server | Application Server |
+|------------|-------------------|
+| Handles HTTP(S) requests and static files | Runs program logic and executes code |
+| Example: Nginx, Apache | Example: uWSGI, Gunicorn, PHP-FPM, Node Runtime |
+| Fast at serving static content | Processes business logic + DB calls |
+| Forwards dynamic requests to the app server | Generates dynamic content & responses |
+
+---
+
+## Summary
+
+This infrastructure solves previous limitations by:
+
+- Removing load balancer SPOF through load-balancer clustering
+- Separating components for better performance & maintainability
+- Improving horizontal scaling capability
+- Preparing the system for production-grade high availability
+
+---

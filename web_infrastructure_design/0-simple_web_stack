@@ -1,0 +1,49 @@
+# 0. Simple Web Stack
+
+## Infrastructure Diagram (Whiteboard Screenshot)
+[🔗 Insert your image link here]
+
+---
+
+## Description
+
+A user wants to access the website `www.foobar.com`.  
+The domain name `foobar.com` has a **DNS A record** pointing `www` → `8.8.8.8`.  
+The user's browser resolves the domain via DNS, connects to server IP **8.8.8.8**, sends an HTTP/HTTPS request to the web server (Nginx).  
+Nginx serves static files or forwards dynamic requests to the application server, which processes the application code and communicates with the MySQL database if data is needed.  
+The response travels back to the user via the Internet using HTTP/TCP.
+
+---
+
+## Components Used
+
+| Component | Description |
+|----------|-------------|
+| Domain Name: `foobar.com` | Human-friendly access instead of using IP |
+| DNS `www` Record | A record pointing `www.foobar.com -> 8.8.8.8` |
+| Server | Physical/virtual machine hosting all components |
+| Web Server (Nginx) | Receives HTTP requests, serves static content, forwards dynamic requests |
+| Application Server | Runs backend logic, executes code, talks to DB |
+| Application Files | Code base for website functionality |
+| Database (MySQL) | Stores persistent data accessed by application |
+
+---
+
+## Communication
+
+The server communicates with the user's computer over the **Internet using HTTP/HTTPS over TCP/IP**.
+
+---
+
+## Issues / Weaknesses
+
+1. **SPOF – Single Point of Failure**  
+   Entire infrastructure depends on one machine. If server fails, website goes down.
+
+2. **Maintenance causes downtime**  
+   Updating code, restarting Nginx or DB will stop the service temporarily.
+
+3. **No scalability**  
+   One server cannot handle high traffic; performance degrades under heavy load.
+
+---

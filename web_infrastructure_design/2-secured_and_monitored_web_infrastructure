@@ -1,0 +1,152 @@
+# 2. Secured and Monitored Web Infrastructure
+
+## Infrastructure Diagram (Whiteboard Screenshot)
+[🔗 Insert your image link here]
+
+---
+
+## Overview
+
+We are hosting `www.foobar.com` using a **secured and monitored distributed web infrastructure**.  
+The setup builds on the previous design (Load Balancer + 2 Web/App servers + MySQL), but now:
+
+- Traffic is **encrypted with HTTPS** using an SSL certificate on the load balancer.
+- The infrastructure is protected by **three firewalls**.
+- All servers are **monitored via monitoring clients** (e.g., Sumo Logic, Datadog, Prometheus agent, etc.).
+
+---
+
+## Components
+
+- **DNS**
+  - `www.foobar.com` → public IP of the Load Balancer.
+- **Firewall #1 (Edge Firewall)**
+  - Between the Internet and the Load Balancer.
+- **Load Balancer (HAProxy)**
+  - Terminates HTTPS using an SSL certificate for `www.foobar.com`.
+  - Distributes traffic to backend servers (e.g., Round Robin).
+- **Firewall #2 (Web/App Tier Firewall)**
+  - Between the Load Balancer and the Web/App servers.
+- **2 Web/Application Servers**
+  - Each runs:
+    - Web Server (Nginx),
+    - Application Server,
+    - Application Code.
+- **Firewall #3 (DB Firewall)**
+  - Between the Web/App tier and the Database server(s).
+- **Database (MySQL)**
+  - One Primary (write) MySQL server (and optionally a Replica).
+- **Monitoring Clients (3 agents)**
+  - One agent installed on:
+    - the Load Balancer,
+    - Web/App Server 1,
+    - Web/App Server 2.
+  - Agents collect logs and metrics and send them to a central monitoring service.
+
+---
+
+## Why each additional element is added
+
+1. **Firewalls (3 firewalls)**
+   - **Firewall #1 (Edge)**: Protects the entry point; only allows HTTP/HTTPS (80/443) traffic from the Internet to the Load Balancer.
+   - **Firewall #2 (Web/App)**: Restricts traffic between the Load Balancer and the application servers (only LB → servers on HTTP/HTTPS ports).
+   - **Firewall #3 (DB)**: Restricts access to MySQL; only allows traffic from Web/App servers to the DB port (e.g., 3306).
+   - Overall purpose: network segmentation, access control, and reduced attack surface.
+
+2. **SSL Certificate (HTTPS)**
+   - Installed on the Load Balancer.
+   - Enables `https://www.foobar.com` with encrypted traffic between clients and the Load Balancer.
+   - Protects data in transit (credentials, sessions, sensitive data).
+
+3. **Monitoring Clients (3 agents)**
+   - Each server runs a monitoring agent to:
+     - Collect system metrics (CPU, RAM, disk, network),
+     - Collect logs (Nginx logs, application logs, DB logs),
+     - Send data to a central monitoring/observability platform.
+   - Used for alerting, troubleshooting, capacity planning, and security visibility.
+
+---
+
+## What firewalls are for
+
+- **Firewalls** control which traffic is allowed in and out of a network segment.
+- They:
+  - Block unauthorized access,
+  - Only allow specific IPs/ports/protocols,
+  - Act as a security boundary between the Internet, web tier, and database tier.
+
+---
+
+## Why traffic is served over HTTPS
+
+- **HTTPS** encrypts the communication between the client and the server using TLS.
+- Benefits:
+  - Confidentiality: attackers cannot read the traffic.
+  - Integrity: data cannot be modified in transit without detection.
+  - Authentication: the client can verify it is talking to `www.foobar.com`.
+  - Required for modern security standards and user trust.
+
+---
+
+## What monitoring is used for
+
+- **Monitoring** provides:
+  - Visibility into performance (latency, throughput, errors),
+  - Detection of failures and anomalies,
+  - Security insights (suspicious access patterns),
+  - Historical data for debugging incidents.
+- Without monitoring, issues may go unnoticed until users complain.
+
+---
+
+## How the monitoring tool collects data
+
+- Monitoring agents (clients) are installed on each server.
+- They:
+  - Collect **metrics**: CPU usage, memory, disk, network, QPS, etc.
+  - Collect **logs**: Nginx access/error logs, application logs, system logs.
+  - Periodically send this data (via HTTPS or another protocol) to a central monitoring backend (e.g., Sumo Logic, DataDog, Prometheus + Alertmanager).
+- The central service stores, aggregates, and visualizes the data and can trigger alerts.
+
+---
+
+## Monitoring Web Server QPS (Queries Per Second)
+
+To monitor web server QPS:
+
+1. **Enable detailed access logging** in Nginx (each request is logged with a timestamp).
+2. **Configure the monitoring client** to:
+   - Parse Nginx access logs,
+   - Count the number of requests per unit time (e.g., per second/per minute),
+   - Export this as a metric: `web_server_qps`.
+3. **Create a dashboard and alerts**:
+   - Visualize QPS over time,
+   - Set thresholds (e.g., alert if QPS suddenly spikes or drops to zero).
+
+Alternatively, expose a **status endpoint** (e.g., `stub_status` in Nginx) and have the monitoring tool scrape it and compute QPS from the counters.
+
+---
+
+## Issues with this infrastructure
+
+1. **Terminating SSL at the Load Balancer level**
+   - SSL/TLS is decrypted at the Load Balancer, and traffic from LB to backend servers is in plain HTTP.
+   - Issues:
+     - Internal network traffic is not encrypted; if the internal network is compromised, an attacker can sniff traffic.
+     - No true end-to-end encryption from client to application server.
+     - Private key is stored only on the LB, which becomes a critical security asset.
+
+2. **Only one MySQL server accepting writes**
+   - The Primary DB is still a **single point of failure for writes**:
+     - If it fails, the application cannot perform write operations (no new data, no updates).
+     - It is also a **performance bottleneck**: all writes are handled by one node.
+   - Failover to a Replica may require manual intervention and careful reconfiguration.
+
+3. **Servers with all the same components (DB, Web server, App server)**
+   - If each server has web, app, and DB components:
+     - **Security risk**: compromise of one server exposes all layers (web + app + DB).
+     - **Resource contention**: CPU/RAM/Disk are shared by all roles, making capacity planning more difficult.
+     - **Lack of separation of concerns**: harder to scale tiers independently (e.g., scaling web without scaling DB).
+     - **Operational complexity**: updates or crashes in one component can affect the others on the same machine.
+
+---
